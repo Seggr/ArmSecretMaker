@@ -1,0 +1,78 @@
+{
+   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+   "contentVersion": "1.0.0.0",
+   "parameters": {
+      "keyMakerCode": {
+         "type": "String",
+         "defaultValue": "k%2FpYQIu8q1cVIwXQzV%2FfnhUfneGYbe9Um0EL9W6a3ne9MqKGpw0OeA%3D%3D"
+      }
+   },
+   "variables": {
+      "vaultName": "key-working",
+      "secretGeneratorUri": "[concat('https://passmaker202.azurewebsites.net/api/setSecret/',variables('vaultName'),'/?code=',parameters('keyMakerCode'))]"
+   },
+   "resources": [
+      {
+         "type": "Microsoft.KeyVault/vaults",
+         "apiVersion": "2016-10-01",
+         "name": "[variables('vaultName')]",
+         "location": "[resourceGroup().location]",
+         "dependsOn": [
+         ],
+         "properties": {
+            "sku": {
+               "name": "standard",
+               "family": "A"
+            },
+            "enabledForDeployment": true,
+            "enabledForTemplateDeployment": true,
+            "tenantId": "[subscription().tenantId]",
+            "accessPolicies": [
+               {
+                  "tenantId": "cadf90bf-0e07-464e-a7c4-f55ca24aa625",
+                  "objectId": "e3b37ca2-16e0-4eba-8785-00e83820713e",
+                  "permissions": {
+                     "secrets": [
+                        "set"
+                     ]
+                  }
+               }
+            ],
+            "enableSoftDelete": false
+         }
+      },
+      {
+         "name": "SpawnSecret",
+         "apiVersion": "2016-06-01",
+         "type": "Microsoft.Resources/deployments",
+         "dependsOn": [
+            "[reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')))]"
+         ],
+         "properties": {
+            "mode": "Incremental",
+            "templateLink": {
+               "uri": "[variables('secretGeneratorUri')]",
+               "contentVersion": "1.0.0.0"
+            },
+            "parameters": {}
+         }
+      },
+      {
+         "type": "Microsoft.KeyVault/vaults/secrets",
+         "name": "[concat(variables('vaultName'), '/', 'supersecret')]",
+         "apiVersion": "2016-10-01",
+         "location": "[resourceGroup().location]",
+         "dependsOn": [
+            "[reference(resourceId('Microsoft.KeyVault/vaults', variables('vaultName')))]"
+         ],
+         "properties": {
+            "value": {
+               "keyVault": {
+                  "id": "[resourceId(subscription().subscriptionId, resourceGroup().name, 'Microsoft.KeyVault/vaults', variables('vaultName'))]"
+               },
+               "secretName": "Sysadmin"
+            }
+         }
+      }
+   ]
+}
